@@ -23,7 +23,6 @@ endif
 
 include $(BUILD_SHARED_LIBRARY)
 
-
 include $(CLEAR_VARS)
 
 LOCAL_MODULE := libaudio
