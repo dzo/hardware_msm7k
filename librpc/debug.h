@@ -59,7 +59,7 @@
         if (__builtin_expect (cond, 0)) {                                      \
             fprintf(stderr, "%s:%s:(%d): ", __FILE__, __FUNCTION__, __LINE__); \
             fprintf(stderr, ##msg);                                            \
-            LOGE(msg);                                                         \
+        	LOGE(msg);                                            \
         }                                                                      \
     } while(0)
 

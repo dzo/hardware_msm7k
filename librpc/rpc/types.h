@@ -384,7 +384,7 @@ typedef struct xdr_ops_struct xdr_ops_s_type;
   for servers.
   ===========================================================================*/
 
-#define RPCROUTER_MSGSIZE_MAX (2048)
+#define RPCROUTER_MSGSIZE_MAX (18432)
 
 struct xdr_struct {
   const xdr_ops_s_type      *xops;

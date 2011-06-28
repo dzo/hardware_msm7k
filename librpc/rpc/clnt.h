@@ -36,6 +36,12 @@
 #ifndef _RPC_CLNT_H
 #define _RPC_CLNT_H 1
 
+
+/*
+ * By convention, procedure 0 takes null arguments and returns them
+ */
+#define NULLPROC ((u_long)0)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

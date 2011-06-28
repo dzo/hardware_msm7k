@@ -1,3 +1,5 @@
+/* Copyright (c) 2009-2010, Code Aurora Forum. */
+
 #include <rpc/rpc.h>
 #include <arpa/inet.h>
 #include <rpc/rpc_router_ioctl.h>
@@ -12,6 +14,7 @@
 #include <stdlib.h>
 
 #include <hardware_legacy/power.h>
+#include <poll.h>
 
 #define ANDROID_WAKE_LOCK_NAME "rpc-interface"
 
@@ -55,8 +58,8 @@ struct CLIENT {
 
 extern void* svc_find(void *xprt, rpcprog_t prog, rpcvers_t vers);
 extern void svc_dispatch(void *svc, void *xprt);
-extern int  r_open();
-extern void r_close();
+extern int  r_open(const char *name);
+extern void r_close(int handle);
 extern xdr_s_type *xdr_init_common(const char *name, int is_client);
 extern xdr_s_type *xdr_clone(xdr_s_type *);
 extern void xdr_destroy_common(xdr_s_type *xdr);
@@ -70,6 +73,7 @@ static volatile unsigned int num_clients;
 static volatile fd_set rx_fdset;
 static volatile int max_rxfd;
 static volatile struct CLIENT *clients;
+static int router_fd;
 
 /* There's one of these for each RPC client which has received an RPC call. */
 static void *cb_context(void *__u)
@@ -132,6 +136,23 @@ static void *cb_context(void *__u)
                     xdr_destroy_common(*svc_xdr);
                 }
                 
+
+                /* Do these checks before the clone */
+                if (client->xdr->in_len < 0) {
+                    E("%08x:%08x xdr->in_len = %i error %s (%d)",
+                        client->xdr->in_len,
+                        client->xdr->x_prog, client->xdr->x_vers,
+                        strerror(errno), errno);
+                    continue;
+                }
+                if (client->xdr->out_next < 0) {
+                    E("%08x:%08x xdr->out_next = %i error %s (%d)",
+                        client->xdr->out_next,
+                        client->xdr->x_prog, client->xdr->x_vers,
+                    strerror(errno), errno);
+                    continue;
+                }
+
                 D("%08x:%08x cloning XDR for "
                   "callback client %08x:%08x.\n",
                   client->xdr->x_prog,
@@ -184,18 +205,35 @@ static void *cb_context(void *__u)
 static void *rx_context(void *__u __attribute__((unused)))
 {
     int n;
-    struct timeval tv;
     fd_set rfds;
+    int ret;
+    struct pollfd fd;
+    int timeout = 0;
+
+    memset((void *) &fd, 0, sizeof(fd));
     while(num_clients) {
         pthread_mutex_lock(&rx_mutex);
         rfds = rx_fdset;
         pthread_mutex_unlock(&rx_mutex);
-        tv.tv_sec = 0; tv.tv_usec = 500 * 1000;
-        n = select(max_rxfd + 1, (fd_set *)&rfds, NULL, NULL, &tv);
+
+        ret = poll(&fd, 1, timeout);
+        if (ret > 0) {
+            if (fd.revents & POLLERR) {
+                D("Modem is resetting.\n");
+                timeout = 500;
+                continue;
+            }
+        }
+        timeout = 0;
+
+        n = select(max_rxfd + 1, (fd_set *)&rfds, NULL, NULL, NULL);
         if (n < 0) {
             E("select() error %s (%d)\n", strerror(errno), errno);
             continue;
         }
+
+	if (!num_clients)
+            break;
 
         if (n) {
             pthread_mutex_lock(&rx_mutex); /* sync access to the client list */
@@ -220,12 +258,26 @@ static void *rx_context(void *__u __attribute__((unused)))
                             &client->input_xdr_lock);                        
                     }
                     D("%08x:%08x reading data.\n",
-                      client->xdr->x_prog, client->xdr->x_vers);
+                       client->xdr->x_prog, client->xdr->x_vers);
                     grabPartialWakeLock();
-                    if (client->xdr->xops->read(client->xdr) == 0) {
-                        E("%08x:%08x ONCRPC read error: aborting!\n",
-                          client->xdr->x_prog, client->xdr->x_vers);
-                        abort();
+                    ret = client->xdr->xops->read(client->xdr);
+                    if (ret == FALSE) {
+                        E("%08x:%08x xops->read() error %s (%d)\n",
+                          client->xdr->x_prog, client->xdr->x_vers,
+                        strerror(errno), errno);
+
+                        if (errno == ENETRESET) {
+                            E("%08x:%08x clearing reset.\n",
+                                client->xdr->x_prog, client->xdr->x_vers);
+                                client->xdr->xops->xdr_control(
+                                client->xdr,
+                                RPC_ROUTER_IOCTL_CLEAR_NETRESET, NULL);
+                           fd.fd = client->xdr->fd;
+                        }
+
+                        pthread_mutex_unlock(&client->input_xdr_lock);
+                        releaseWakeLock();
+                        continue;
                     }
                     client->input_xdr_busy = 1;
                     pthread_mutex_unlock(&client->input_xdr_lock);
@@ -518,12 +570,14 @@ bool_t xdr_recv_reply_header (xdr_s_type *xdr, rpc_reply_header *reply)
 
     switch ((*reply).stat) {
     case RPC_MSG_ACCEPTED:
-        if (!xdr_recv_accepted_reply_header(xdr, &reply->u.ar))
+        if (!xdr_recv_accepted_reply_header(xdr, &reply->u.ar)) {
             return FALSE;
+    }
         break;
     case RPC_MSG_DENIED:
-        if (!xdr_recv_denied_reply(xdr, &reply->u.dr))
+        if (!xdr_recv_denied_reply(xdr, &reply->u.dr)) {
             return FALSE;
+    }
         break;
     default:
         return FALSE;
@@ -531,6 +585,9 @@ bool_t xdr_recv_reply_header (xdr_s_type *xdr, rpc_reply_header *reply)
 
     return TRUE;
 } /* xdr_recv_reply_header */
+
+/* pipe to wake up receive thread */
+static int wakeup_pipe[2];
 
 CLIENT *clnt_create(
     char * host,
@@ -540,7 +597,7 @@ CLIENT *clnt_create(
 {
     CLIENT *client = calloc(1, sizeof(CLIENT));
     if (client) {
-        char name[256];
+        char name[20];
 
         /* for versions like 0x00010001, only compare against major version */
         if ((vers & 0xFFF00000) == 0)
@@ -548,11 +605,24 @@ CLIENT *clnt_create(
 
         pthread_mutex_lock(&rx_mutex);
 
-        snprintf(name, sizeof(name), "/dev/oncrpc/%08x:%08x",
-                 (uint32_t)prog, (int)vers);
+	if (!num_clients) {
+	    /* Open the router device to load the modem */
+	    router_fd = r_open("00000000:0");
+	    if (router_fd < 0) {
+		free(client);
+		pthread_mutex_unlock(&rx_mutex);
+		return NULL;
+	    }
+	}
+        /* Implment backwards compatibility */
+        vers = (vers & 0x80000000) ? vers : vers & 0xFFFF0000;
+
+        snprintf(name, sizeof(name), "%08x:%08x", (uint32_t)prog, (int)vers);
         client->xdr = xdr_init_common(name, 1 /* client XDR */);
         if (!client->xdr) {
             E("failed to initialize client (permissions?)!\n");
+	    if (!num_clients)
+		r_close(router_fd);
             free(client);
             pthread_mutex_unlock(&rx_mutex);
             return NULL;
@@ -563,7 +633,15 @@ CLIENT *clnt_create(
 
         if (!num_clients) {
             FD_ZERO(&rx_fdset);
-            max_rxfd = 0;
+            if (pipe(wakeup_pipe) == -1) {
+               E("failed to create pipe\n");
+	       r_close(router_fd);
+               free(client);
+               pthread_mutex_unlock(&rx_mutex);
+               return NULL;
+            }
+            FD_SET(wakeup_pipe[0], &rx_fdset);
+            max_rxfd = wakeup_pipe[0];
         }
 
         FD_SET(client->xdr->fd, &rx_fdset);
@@ -574,7 +652,11 @@ CLIENT *clnt_create(
         if (!num_clients++) {
             D("launching RX thread.\n");
             pthread_create(&rx_thread, NULL, rx_context, NULL);
-        }
+        } else {
+            /* client added, wake up rx_thread */
+            if (write(wakeup_pipe[1], "a", 1) < 0)
+	        E("error writing to pipe\n");
+	}
 
         pthread_mutexattr_init(&client->lock_attr);
 //      pthread_mutexattr_settype(&client->lock_attr, PTHREAD_MUTEX_RECURSIVE);
@@ -635,9 +717,18 @@ void clnt_destroy(CLIENT *client) {
             }
         }
         if (!num_clients) {
+            /* no clients, wake up rx_thread */
+            if (write(wakeup_pipe[1], "d", 1) < 0)
+	        E("error writing to pipe\n");
+
             D("stopping rx thread!\n");
             pthread_join(rx_thread, NULL);
             D("stopped rx thread\n");
+
+            FD_CLR(wakeup_pipe[0], &rx_fdset);
+            close(wakeup_pipe[0]);
+            close(wakeup_pipe[1]);
+	    r_close(router_fd);
         }
         pthread_mutex_unlock(&rx_mutex); /* sync access to the client list */
  
