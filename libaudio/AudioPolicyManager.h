@@ -31,7 +31,16 @@ class AudioPolicyManager: public AudioPolicyManagerBase
 public:
                 AudioPolicyManager(AudioPolicyClientInterface *clientInterface)
                 : AudioPolicyManagerBase(clientInterface) {}
-
+/*
+audio_io_handle_t getInput(int inputSource,
+                                            uint32_t samplingRate,
+                                            uint32_t format,
+                                            uint32_t channels,
+                                            AudioSystem::audio_in_acoustics acoustics) {
+		LOGI("s %d f%d",samplingRate,format);
+		return 1;
+	};
+*/
         virtual ~AudioPolicyManager() {}
 
 protected:

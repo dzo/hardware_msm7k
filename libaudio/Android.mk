@@ -51,7 +51,7 @@ ifeq ($(BOARD_HAVE_BLUETOOTH),true)
   LOCAL_SHARED_LIBRARIES += liba2dp
 endif
 
-include $(BUILD_SHARED_LIBRARY)
+#include $(BUILD_SHARED_LIBRARY)
 
 endif # not BUILD_TINY_ANDROID
 
