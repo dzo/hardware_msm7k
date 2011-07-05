@@ -106,7 +106,6 @@ static uint32_t DEVICE_FMRADIO_STEREO_TX = 14;
 static uint32_t DEVICE_HDMI_STERO_RX = 15; //hdmi_stereo_rx
 static uint32_t DEVICE_COUNT = DEVICE_BT_SCO_TX +1;
 
-//extern "C" int info;
 
 int dev_cnt = 0;
 const char ** name = NULL;
@@ -434,9 +433,6 @@ free(device_list);
 //
 // ----------------------------------------------------------------------------
 
-int myinfo[64];
-
-extern "C" int control,list,device_names;
 
 AudioHardware::AudioHardware() :
     mInit(false), mMicMute(true), mBluetoothNrec(true), mBluetoothId(0),
@@ -445,23 +441,16 @@ AudioHardware::AudioHardware() :
     mTtyMode(TTY_OFF), mDualMicEnabled(false), mFmFd(-1)
 {
 
-        int control1;
+        int control;
         int i = 0,index = 0;
-//	int *ip;
 
         head = (Routing_table* ) malloc(sizeof(Routing_table));
         head->next = NULL;
 
-//        LOGD("msm_mixer_open: Opening the device %x %x", info, &info);
-//	info=myinfo; //&myinfo;
         LOGD("msm_mixer_open: Opening the device");
-//	ip=&info;
-
-//	for(i=-3;i<8;i++)
-//		ip[i]=(i+4)+(i+4)<<4;
 	
-        control1 = msm_mixer_open("/dev/snd/controlC0", 0);
-        if(control1< 0)
+        control = msm_mixer_open("/dev/snd/controlC0", 0);
+        if(control< 0)
                 LOGE("ERROR opening the device %d",control1);
 
 //        if(msm_reset_all_device() < 0)
