@@ -451,7 +451,7 @@ AudioHardware::AudioHardware() :
 	
         control = msm_mixer_open("/dev/snd/controlC0", 0);
         if(control< 0)
-                LOGE("ERROR opening the device %d",control1);
+                LOGE("ERROR opening the device %d",control);
 
 //        if(msm_reset_all_device() < 0)
 //            LOGE("msm_reset_all_device() failed");
