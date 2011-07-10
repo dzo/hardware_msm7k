@@ -17,7 +17,7 @@
 common_msm_dirs := libcopybit liblights libopencorehw librpc libstagefrighthw
 msm7k_dirs := $(common_msm_dirs) boot libgralloc libaudio
 qsd8k_dirs := $(common_msm_dirs) libgralloc-qsd8k libaudio-qsd8k dspcrashd
-msm7x30_dirs := libopencorehw libstagefrighthw liblights libgralloc-qsd8k librpc libaudio-msm7x30
+msm7x30_dirs := libopencorehw liblights libgralloc-qsd8k librpc libaudio-msm7x30 libcamera
 
 ifeq ($(TARGET_BOARD_PLATFORM),msm7k)
   include $(call all-named-subdir-makefiles,$(msm7k_dirs))

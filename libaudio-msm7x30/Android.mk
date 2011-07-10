@@ -37,7 +37,7 @@ LOCAL_STATIC_LIBRARIES := libaudiopolicybase
 ifeq ($(BOARD_HAVE_BLUETOOTH),true)
   LOCAL_CFLAGS += -DWITH_A2DP
 endif
-LOCAL_CFLAGS += -DHAVE_FM_RADIO
+//LOCAL_CFLAGS += -DHAVE_FM_RADIO
 include $(BUILD_SHARED_LIBRARY)
 
 # ---------------------------------------------------------------------------------
