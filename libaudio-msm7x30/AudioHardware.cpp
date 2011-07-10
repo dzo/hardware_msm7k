@@ -438,7 +438,7 @@ AudioHardware::AudioHardware() :
     mInit(false), mMicMute(true), mBluetoothNrec(true), mBluetoothId(0),
     mOutput(0),
     mCurSndDevice(-1),
-    mTtyMode(TTY_OFF), mDualMicEnabled(false), mFmFd(-1)
+    mTtyMode(TTY_OFF), mDualMicEnabled(true), mFmFd(-1)
 {
 
         int control;
@@ -493,9 +493,9 @@ AudioHardware::AudioHardware() :
                 index = DEVICE_FMRADIO_HEADSET_RX;
             else if(strcmp((char* )name[i],"fmradio_speaker_rx") == 0)
                 index = DEVICE_FMRADIO_SPEAKER_RX;
-            else if(strcmp((char* )name[i],"handset_dual_mic_endfire_tx") == 0)
+            else if(strcmp((char* )name[i],"handset_dual_mic_broadside_tx") == 0)
                 index = DEVICE_DUALMIC_HANDSET_TX;
-            else if(strcmp((char* )name[i],"speaker_dual_mic_endfire_tx") == 0)
+            else if(strcmp((char* )name[i],"speaker_dual_mic_broadside_tx") == 0)
                 index = DEVICE_DUALMIC_SPEAKER_TX;
             else if(strcmp((char* )name[i],"tty_headset_mono_rx") == 0)
                 index = DEVICE_TTY_HEADSET_MONO_RX;

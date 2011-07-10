@@ -36,6 +36,7 @@ enum {
 
 /*****************************************************************************/
 
+#if 0
 enum {
     /* OEM specific HAL formats */
     //HAL_PIXEL_FORMAT_YCbCr_422_SP = 0x100, // defined in hardware.h
@@ -52,6 +53,7 @@ enum {
     HAL_PIXEL_FORMAT_YCrCb_422_SP           = 0x10B,
     HAL_PIXEL_FORMAT_YCrCb_420_SP_INTERLACE = 0x10C,
 };
+#endif
 
 /*****************************************************************************/
 
