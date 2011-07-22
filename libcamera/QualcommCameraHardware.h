@@ -305,7 +305,7 @@ typedef enum {
 } camera_cb_type;
 
 struct cam_frame_start_parms {
-	unsigned int unknown;
+	void * unknown;
 	struct msm_frame frame;
 	struct msm_frame video_frame;
 };

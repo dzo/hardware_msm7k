@@ -43,6 +43,7 @@
 #if HAVE_ANDROID_OS
 #include <linux/android_pmem.h>
 #endif
+#include <time.h>
 #include <linux/ioctl.h>
 #include <camera/CameraParameters.h>
 
@@ -106,7 +107,7 @@ int8_t (*LINK_jpeg_encoder_setThumbnailQuality)(uint32_t quality);
 int8_t (*LINK_jpeg_encoder_setRotation)(uint32_t rotation);
 int8_t (*LINK_jpeg_encoder_setLocation)(const camera_position_type *location);
 const struct camera_size_type *(*LINK_default_sensor_get_snapshot_sizes)(int *len);
-int (*LINK_launch_cam_conf_thread)(void);
+int (*LINK_launch_cam_conf_thread)(void *);
 int (*LINK_release_cam_conf_thread)(void);
 int8_t (*LINK_zoom_crop_upscale)(uint32_t width, uint32_t height,
     uint32_t cropped_width, uint32_t cropped_height, uint8_t *img_buf);
@@ -162,10 +163,15 @@ union zoomimage
     struct mdp_blit_req_list list;
 } zoomImage;
 
-//Default to VGA
-#define DEFAULT_PREVIEW_WIDTH 480
-#define DEFAULT_PREVIEW_HEIGHT 320
+//Default to WVGA
+#define DEFAULT_PREVIEW_WIDTH 800
+#define DEFAULT_PREVIEW_HEIGHT 480
 
+/*
+#define MINIMUM_FPS 5
+#define MAXIMUM_FPS 30
+#define DEFAULT_FPS MAXIMUM_FPS
+*/
 /*
  * Modifying preview size requires modification
  * in bitmasks for boardproperties
@@ -207,15 +213,15 @@ board_property boardProperties[] = {
  */
 //sorted on column basis
 static const camera_size_type picture_sizes[] = {
-//    { 2592, 1944 }, // 5MP
+    { 2592, 1944 }, // 5MP
     { 2560, 1920 }, // 5MP (slightly reduced)
     { 2048, 1536 }, // 3MP QXGA
-    //{ 1920, 1080 }, //HD1080
+    { 1920, 1080 }, //HD1080
     { 1600, 1200 }, // 2MP UXGA
     { 1280, 768 }, //WXGA
     { 1280, 720 }, //HD720
     { 1024, 768}, // 1MP XGA
-//    { 800, 600 }, //SVGA
+    { 800, 600 }, //SVGA
     { 800, 480 }, // WVGA
     { 640, 480 }, // VGA
     { 352, 288 }, //CIF
@@ -238,7 +244,7 @@ static const target_map targetList [] = {
     { "qsd8250", TARGET_QSD8250 },
     { "msm7630", TARGET_MSM7630 }
 };
-static targetType mCurrentTarget = TARGET_MSM7627;
+static targetType mCurrentTarget = TARGET_MSM7630;
 
 typedef struct {
     uint32_t aspect_ratio;
@@ -313,10 +319,10 @@ static const str_map effects[] = {
     { CameraParameters::EFFECT_NEGATIVE,   CAMERA_EFFECT_NEGATIVE },
     { CameraParameters::EFFECT_SOLARIZE,   CAMERA_EFFECT_SOLARIZE },
     { CameraParameters::EFFECT_SEPIA,      CAMERA_EFFECT_SEPIA },
-//    { CameraParameters::EFFECT_POSTERIZE,  CAMERA_EFFECT_POSTERIZE },
+    { CameraParameters::EFFECT_POSTERIZE,  CAMERA_EFFECT_POSTERIZE },
     { CameraParameters::EFFECT_WHITEBOARD, CAMERA_EFFECT_WHITEBOARD },
     { CameraParameters::EFFECT_BLACKBOARD, CAMERA_EFFECT_BLACKBOARD },
-//    { CameraParameters::EFFECT_AQUA,       CAMERA_EFFECT_AQUA }
+    { CameraParameters::EFFECT_AQUA,       CAMERA_EFFECT_AQUA }
 };
 
 // from qcamera/common/camera.h
@@ -540,6 +546,28 @@ static struct country_map country_numeric[] = {
     { 750, CAMERA_ANTIBANDING_50HZ }, // Falkland Islands
 };
 
+/*
+static const str_map scenemode[] = {
+     { CameraParameters::SCENE_MODE_AUTO,           CAMERA_BESTSHOT_OFF },
+     { CameraParameters::SCENE_MODE_ACTION,         CAMERA_BESTSHOT_ACTION },
+     { CameraParameters::SCENE_MODE_PORTRAIT,       CAMERA_BESTSHOT_PORTRAIT },
+     { CameraParameters::SCENE_MODE_LANDSCAPE,      CAMERA_BESTSHOT_LANDSCAPE },
+     { CameraParameters::SCENE_MODE_NIGHT,          CAMERA_BESTSHOT_NIGHT },
+     { CameraParameters::SCENE_MODE_NIGHT_PORTRAIT, CAMERA_BESTSHOT_NIGHT_PORTRAIT },
+     { CameraParameters::SCENE_MODE_THEATRE,        CAMERA_BESTSHOT_THEATRE },
+     { CameraParameters::SCENE_MODE_BEACH,          CAMERA_BESTSHOT_BEACH },
+     { CameraParameters::SCENE_MODE_SNOW,           CAMERA_BESTSHOT_SNOW },
+     { CameraParameters::SCENE_MODE_SUNSET,         CAMERA_BESTSHOT_SUNSET },
+     { CameraParameters::SCENE_MODE_STEADYPHOTO,    CAMERA_BESTSHOT_ANTISHAKE },
+     { CameraParameters::SCENE_MODE_FIREWORKS ,     CAMERA_BESTSHOT_FIREWORKS },
+     { CameraParameters::SCENE_MODE_SPORTS ,        CAMERA_BESTSHOT_SPORTS },
+     { CameraParameters::SCENE_MODE_PARTY,          CAMERA_BESTSHOT_PARTY },
+     { CameraParameters::SCENE_MODE_CANDLELIGHT,    CAMERA_BESTSHOT_CANDLELIGHT },
+     { CameraParameters::SCENE_MODE_BACKLIGHT,      CAMERA_BESTSHOT_BACKLIGHT },
+     { CameraParameters::SCENE_MODE_FLOWERS,        CAMERA_BESTSHOT_FLOWERS },
+};
+*/
+
 #define country_number (sizeof(country_numeric) / sizeof(country_map))
 
 /* Look up pre-sorted antibanding_type table by current MCC. */
@@ -575,7 +603,7 @@ static const str_map flash[] = {
     { CameraParameters::FLASH_MODE_OFF,  LED_MODE_OFF },
     { CameraParameters::FLASH_MODE_AUTO, LED_MODE_AUTO },
     { CameraParameters::FLASH_MODE_ON, LED_MODE_ON },
-    { "torch", LED_MODE_ON }
+    { CameraParameters::FLASH_MODE_TORCH, LED_MODE_ON }
 };
 
 // from mm-camera/common/camera.h.
@@ -585,7 +613,8 @@ static const str_map iso[] = {
     { CameraParameters::ISO_100,   CAMERA_ISO_100},
     { CameraParameters::ISO_200,   CAMERA_ISO_200},
     { CameraParameters::ISO_400,   CAMERA_ISO_400},
-    { CameraParameters::ISO_800,   CAMERA_ISO_800 }
+    { CameraParameters::ISO_800,   CAMERA_ISO_800 }, 
+    { CameraParameters::ISO_1600,   CAMERA_ISO_1600 },
 };
 
 
@@ -601,6 +630,18 @@ static const str_map lensshade[] = {
     { CameraParameters::LENSSHADE_ENABLE, TRUE },
     { CameraParameters::LENSSHADE_DISABLE, FALSE }
 };
+
+static const str_map continuous_af[] = {
+    { CameraParameters::CONTINUOUS_AF_OFF, FALSE },
+    { CameraParameters::CONTINUOUS_AF_ON, TRUE }
+};
+
+#define DONT_CARE_COORDINATE -1
+static const str_map touchafaec[] = {
+    { CameraParameters::TOUCH_AF_AEC_OFF, FALSE },
+    { CameraParameters::TOUCH_AF_AEC_ON, TRUE }
+};
+
 
 struct SensorType {
     const char *name;
@@ -619,7 +660,6 @@ static SensorType sensorTypes[] = {
         { "3mp", 2064, 1544, false, 2048, 1536,0x000007ff },
         { "3mp", 4096, 1536, true, 2048, 1536,0x000007ff }, // 3MP blade
         { "2mp", 3200, 1200, false, 1600, 1200,0x000007ff } };
-
 
 static SensorType * sensorType;
 
@@ -939,8 +979,8 @@ void QualcommCameraHardware::filterPreviewSizes(){
         }
     }
 
-    if (!strcmp(mSensorInfo.name, "ov5642"))
-        boardMask = 0xff;
+//    if (!strcmp(mSensorInfo.name, "ov5642"))
+//        boardMask = 0xff;
 
     int bitMask = boardMask & sensorType->bitMask;
     if(bitMask){
@@ -1012,7 +1052,7 @@ void QualcommCameraHardware::initDefaultParameters()
             picture_formats, sizeof(picture_formats)/sizeof(str_map));
         preview_frame_rate_values = create_values_range_str(
             MINIMUM_FPS, MAXIMUM_FPS);
-        parameter_string_initialized = true;
+       parameter_string_initialized = true;
     }
 
     mParameters.setPreviewSize(DEFAULT_PREVIEW_WIDTH, DEFAULT_PREVIEW_HEIGHT);
@@ -1162,7 +1202,7 @@ void QualcommCameraHardware::initDefaultParameters()
 void QualcommCameraHardware::findSensorType(){
     mDimension.picture_width = DEFAULT_PICTURE_WIDTH;
     mDimension.picture_height = DEFAULT_PICTURE_HEIGHT;
-/*
+
     bool ret = native_set_parm(CAMERA_SET_PARM_DIMENSION,
                     sizeof(cam_ctrl_dimension_t), &mDimension);
     if (ret) {
@@ -1177,7 +1217,7 @@ void QualcommCameraHardware::findSensorType(){
     }
     //default to 5 mp
     LOGD("Failed to find a match for %d x %d, using 5M default",mDimension.raw_picture_width,mDimension.raw_picture_height);
-*/
+
     sensorType = sensorTypes;
     return;
 }
@@ -1310,7 +1350,9 @@ bool QualcommCameraHardware::startCamera()
      * information becomes available.
      */
 
-    if (LINK_launch_cam_conf_thread()) {
+    int i=0;
+
+    if (LINK_launch_cam_conf_thread((void *)&i)) {
         LOGE("failed to launch the camera config thread");
         return false;
     }
@@ -2125,7 +2167,7 @@ void *video_thread(void *user)
 
 void *frame_thread(void *user)
 {
-    LOGD("frame_thread E");
+    LOGD("frame_thread E %p",user);
     sp<QualcommCameraHardware> obj = QualcommCameraHardware::getInstance();
     if (obj != 0) {
         obj->runFrameThread(user);
@@ -2240,6 +2282,7 @@ bool QualcommCameraHardware::initPreview()
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 
+	frame_parms.unknown=&frame_parms;
         frame_parms.frame = frames[kPreviewBufferCount - 1];
 
         if( mCurrentTarget == TARGET_MSM7630 || mCurrentTarget == TARGET_QSD8250 )
@@ -3297,7 +3340,7 @@ void QualcommCameraHardware::debugShowVideoFPS() const
 }
 void QualcommCameraHardware::receivePreviewFrame(struct msm_frame *frame)
 {
-//    LOGV("receivePreviewFrame E");
+    LOGV("receivePreviewFrame E");
 
     if (!mCameraRunning) {
         LOGE("ignoring preview callback--camera has been stopped");
@@ -3353,7 +3396,7 @@ void QualcommCameraHardware::receivePreviewFrame(struct msm_frame *frame)
     }
     mInPreviewCallback = false;
 
-//    LOGV("receivePreviewFrame X");
+    LOGV("receivePreviewFrame X");
 }
 
 
