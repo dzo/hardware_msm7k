@@ -655,6 +655,7 @@ struct SensorType {
 
 static SensorType sensorTypes[] = {
         { "5mp", 2608, 1960, true,  2592, 1944,0x00000fff },
+	{ "5mp", 2608, 1952, true,  2592, 1944,0x00000fff }, // actual 5MP u8800
         { "5mp", 5184, 1944, true,  2592, 1944,0x00000fff }, // actual 5MP blade
         { "5mp", 2560, 1920, true,  2560, 1920,0x00000fff }, //should be 5MP blade
         { "3mp", 2064, 1544, false, 2048, 1536,0x000007ff },
@@ -835,7 +836,7 @@ static void cam_frame_post_video (struct msm_frame *p)
 }
 
 void QualcommCameraHardware::storeTargetType(void) {
-    char mDeviceName[PROPERTY_VALUE_MAX];
+/*    char mDeviceName[PROPERTY_VALUE_MAX];
     property_get("ro.product.device",mDeviceName," ");
     mCurrentTarget = TARGET_MAX;
     for( int i = 0; i < TARGET_MAX ; i++) {
@@ -844,7 +845,8 @@ void QualcommCameraHardware::storeTargetType(void) {
             break;
         }
     }
-    mCurrentTarget = TARGET_MSM7627;
+*/
+    mCurrentTarget = TARGET_MSM7630;
     LOGV(" Storing the current target type as %d ", mCurrentTarget );
     return;
 }

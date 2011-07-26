@@ -236,8 +236,8 @@ int mapFrameBufferLocked(struct private_module_t* module)
 
     uint32_t flags = PAGE_FLIP;
     if (ioctl(fd, FBIOPUT_VSCREENINFO, &info) == -1) {
-        info.yres_virtual = info.yres;
-        flags &= ~PAGE_FLIP;
+        info.yres_virtual = info.yres*2;
+//        flags &= ~PAGE_FLIP;
         LOGW("FBIOPUT_VSCREENINFO failed, page flipping not supported");
     }
 
@@ -259,7 +259,7 @@ int mapFrameBufferLocked(struct private_module_t* module)
             * info.pixclock
     );
 
-    if (refreshRate == 0) {
+    if (refreshRate <= 5) {
         // bleagh, bad info from the driver
         refreshRate = 60*1000;  // 60 Hz
     }
