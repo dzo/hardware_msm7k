@@ -281,7 +281,73 @@ float AudioPolicyManager::computeVolume(int stream, int index, audio_io_handle_t
     return volume;
 }
 
+status_t AudioPolicyManager::checkAndSetVolume(int stream, int index, audio_io_handle_t output, uint32_t device, int delayMs, bool force)
+{
 
+    LOGV("checkAndSetVolume(%d %d %d)",stream,index,device);
+
+    // do not change actual stream volume if the stream is muted
+    if (mOutputs.valueFor(output)->mMuteCount[stream] != 0) {
+        LOGV("checkAndSetVolume() stream %d muted count %d", stream, mOutputs.valueFor(output)->mMuteCount[stream]);
+        return NO_ERROR;
+    }
+
+    // do not change in call volume if bluetooth is connected and vice versa
+    if ((stream == AudioSystem::VOICE_CALL && mForceUse[AudioSystem::FOR_COMMUNICATION] == AudioSystem::FORCE_BT_SCO) ||
+        (stream == AudioSystem::BLUETOOTH_SCO && mForceUse[AudioSystem::FOR_COMMUNICATION] != AudioSystem::FORCE_BT_SCO)) {
+        LOGV("checkAndSetVolume() cannot set stream %d volume with force use = %d for comm",
+             stream, mForceUse[AudioSystem::FOR_COMMUNICATION]);
+        return INVALID_OPERATION;
+    }
+
+    float volume = computeVolume(stream, index, output, device);
+    // We actually change the volume if:
+    // - the float value returned by computeVolume() changed
+    // - the force flag is set
+    if (volume != mOutputs.valueFor(output)->mCurVolume[stream] || stream == AudioSystem::VOICE_CALL ||
+#ifdef HAVE_FM_RADIO
+            (stream == AudioSystem::FM) ||
+#endif
+            force) {
+        mOutputs.valueFor(output)->mCurVolume[stream] = volume;
+        LOGV("setStreamVolume() for output %d stream %d, volume %f, delay %d", output, stream, volume, delayMs);
+        if (stream == AudioSystem::VOICE_CALL ||
+            stream == AudioSystem::DTMF ||
+            stream == AudioSystem::BLUETOOTH_SCO) {
+            // offset value to reflect actual hardware volume that never reaches 0
+            // 1% corresponds roughly to first step in VOICE_CALL stream volume setting (see AudioService.java)
+            volume = 0.01 + 0.99 * volume;
+#ifdef HAVE_FM_RADIO
+        } else if (stream == AudioSystem::FM) {
+            float fmVolume = -1.0;
+            fmVolume = computeVolume(stream, index, output, device);
+            if (fmVolume >= 0 && output == mHardwareOutput) {
+                mpClientInterface->setFmVolume(fmVolume, delayMs);
+            }
+            return NO_ERROR;
+#endif
+        }
+
+        mpClientInterface->setStreamVolume((AudioSystem::stream_type)stream, volume, output, delayMs);
+    }
+
+    if (stream == AudioSystem::VOICE_CALL ||
+        stream == AudioSystem::BLUETOOTH_SCO) {
+        float voiceVolume;
+        // Force voice volume to max for bluetooth SCO as volume is managed by the headset
+        if (stream == AudioSystem::VOICE_CALL) {
+            voiceVolume = (float)index/(float)mStreams[stream].mIndexMax;
+        } else {
+            voiceVolume = 1.0;
+        }
+//        if (voiceVolume != mLastVoiceVolume && output == mHardwareOutput) {
+            mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
+           mLastVoiceVolume = voiceVolume;
+//        }
+    }
+
+    return NO_ERROR;
+}
 
 
 }; // namespace android

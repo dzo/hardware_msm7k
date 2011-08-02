@@ -50,6 +50,7 @@ protected:
         // phone state, connected devices...
         virtual uint32_t getDeviceForStrategy(routing_strategy strategy, bool fromCache = true);
         virtual float computeVolume(int stream, int index, audio_io_handle_t output, uint32_t device);
+	virtual status_t checkAndSetVolume(int stream, int index, audio_io_handle_t output, uint32_t device, int delayMs, bool force);
 };
 
 };

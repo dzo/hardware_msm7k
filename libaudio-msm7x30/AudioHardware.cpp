@@ -827,7 +827,7 @@ static status_t set_volume_rpc(uint32_t device,
                                uint32_t method,
                                uint32_t volume)
 {
-    LOGV("set_volume_rpc(%d, %d, %d)\n", device, method, volume);
+//    LOGV("set_volume_rpc(%d, %d, %d)\n", device, method, volume);
 
     if (device == -1UL) return NO_ERROR;
      return NO_ERROR;
@@ -843,9 +843,9 @@ status_t AudioHardware::setVoiceVolume(float v)
         v = 1.0;
     }
 
-    int vol = lrint(v * 100.0);
+    int vol = lrint(v * 166.0);
     LOGD("setVoiceVolume(%f)\n", v);
-    LOGI("Setting in-call volume to %d (available range is 0 to 100)\n", vol);
+    LOGI("Setting in-call volume to %d (available range is 0 to 150)\n", vol);
 
     if(msm_set_voice_rx_vol(vol)) {
         LOGE("msm_set_voice_rx_vol(%d) failed errno = %d",vol,errno);

@@ -202,7 +202,7 @@ int msm_set_voice_tx_mute(int mute) {
 }
 int msm_set_voice_rx_vol(int volume) {
     LOGD("Set Voice rx Volume %d",volume);
-    elem_write(ctrls[VOICEVOLUME], 1, volume*2,0);
+    elem_write(ctrls[VOICEVOLUME], 1, volume,0);
     return 0;
 }
 int msm_set_device_volume(int dev_id,int volume) {
