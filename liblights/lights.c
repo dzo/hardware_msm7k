@@ -81,6 +81,8 @@ char const*const KEYBOARD_FILE
 char const*const BUTTON_FILE
         = "/sys/class/leds/button-backlight/brightness";
 
+extern void huawei_oem_rapi_streaming_function(int,int,int,int,int *,int *,int *);
+
 /**
  * device methods
  */
@@ -195,6 +197,7 @@ set_light_buttons(struct light_device_t* dev,
     return err;
 }
 
+
 static int
 set_speaker_light_locked(struct light_device_t* dev,
         struct light_state_t const* state)
@@ -262,10 +265,12 @@ set_speaker_light_locked(struct light_device_t* dev,
             pwm = 16;
 
         blink = 1;
+//	huawei_oem_rapi_streaming_function(0x26,0,0,0xc,&colorRGB,&onMS,&offMS);
     } else {
         blink = 0;
         freq = 0;
         pwm = 0;
+//	huawei_oem_rapi_streaming_function(0x26,0,0,0xc,&colorRGB,0,0);
     }
 
     if (!g_haveAmberLed) {

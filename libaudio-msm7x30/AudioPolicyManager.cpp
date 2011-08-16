@@ -340,10 +340,10 @@ status_t AudioPolicyManager::checkAndSetVolume(int stream, int index, audio_io_h
         } else {
             voiceVolume = 1.0;
         }
-//        if (voiceVolume != mLastVoiceVolume && output == mHardwareOutput) {
+        if (/*voiceVolume != mLastVoiceVolume && */output == mHardwareOutput) {
             mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
            mLastVoiceVolume = voiceVolume;
-//        }
+        }
     }
 
     return NO_ERROR;
