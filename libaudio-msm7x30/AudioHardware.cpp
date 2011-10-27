@@ -64,54 +64,54 @@ static void * acoustic;
 const uint32_t AudioHardware::inputSamplingRates[] = {
         8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000
 };
-static uint32_t INVALID_DEVICE = 65535;
-static uint32_t SND_DEVICE_CURRENT=-1;
-static uint32_t SND_DEVICE_HANDSET= 0;
-static uint32_t SND_DEVICE_SPEAKER= 1;
-static uint32_t SND_DEVICE_HEADSET= 2;
-static uint32_t SND_DEVICE_FM_HANDSET = 3;
-static uint32_t SND_DEVICE_FM_SPEAKER= 4;
-static uint32_t SND_DEVICE_FM_HEADSET= 5;
-static uint32_t SND_DEVICE_BT= 6;
-static uint32_t SND_DEVICE_BT_EC_OFF=-1;
-static uint32_t SND_DEVICE_HEADSET_AND_SPEAKER=7;
-static uint32_t SND_DEVICE_IN_S_SADC_OUT_HANDSET=9;
-static uint32_t SND_DEVICE_IN_S_SADC_OUT_SPEAKER_PHONE=10;
-static uint32_t SND_DEVICE_TTY_HEADSET=11;
-static uint32_t SND_DEVICE_TTY_HCO=12;
-static uint32_t SND_DEVICE_TTY_VCO=13;
-static uint32_t SND_DEVICE_TTY_FULL=14;
-static uint32_t SND_DEVICE_CARKIT=-1;
-static uint32_t SND_DEVICE_NO_MIC_HEADSET=-1;
-static uint32_t SND_DEVICE_HDMI=15;
-static uint32_t SND_DEVICE_HEADPHONE_AND_SPEAKER=16;
+static int INVALID_DEVICE = 65535;
+static int SND_DEVICE_CURRENT=-1;
+static int SND_DEVICE_HANDSET= 0;
+static int SND_DEVICE_SPEAKER= 1;
+static int SND_DEVICE_HEADSET= 2;
+static int SND_DEVICE_FM_HANDSET = 3;
+static int SND_DEVICE_FM_SPEAKER= 4;
+static int SND_DEVICE_FM_HEADSET= 5;
+static int SND_DEVICE_BT= 6;
+static int SND_DEVICE_BT_EC_OFF=-1;
+static int SND_DEVICE_HEADSET_AND_SPEAKER=7;
+static int SND_DEVICE_IN_S_SADC_OUT_HANDSET=9;
+static int SND_DEVICE_IN_S_SADC_OUT_SPEAKER_PHONE=10;
+static int SND_DEVICE_TTY_HEADSET=11;
+static int SND_DEVICE_TTY_HCO=12;
+static int SND_DEVICE_TTY_VCO=13;
+static int SND_DEVICE_TTY_FULL=14;
+static int SND_DEVICE_CARKIT=-1;
+static int SND_DEVICE_NO_MIC_HEADSET=-1;
+static int SND_DEVICE_HDMI=15;
+static int SND_DEVICE_HEADPHONE_AND_SPEAKER=16;
 
-static uint32_t DEVICE_HANDSET_RX = 0; // handset_rx
-static uint32_t DEVICE_HANDSET_TX = 1;//handset_tx
-static uint32_t DEVICE_SPEAKER_RX = 2; //speaker_stereo_rx
-static uint32_t DEVICE_SPEAKER_TX = 3;//speaker_mono_tx
-static uint32_t DEVICE_HEADSET_RX = 4; //headset_stereo_rx
-static uint32_t DEVICE_HEADSET_TX = 5; //headset_mono_tx
-static uint32_t DEVICE_FMRADIO_HANDSET_RX= 6; //fmradio_handset_rx
-static uint32_t DEVICE_FMRADIO_HEADSET_RX= 7; //fmradio_headset_rx
-static uint32_t DEVICE_FMRADIO_SPEAKER_RX= 8; //fmradio_speaker_rx
-static uint32_t DEVICE_DUALMIC_HANDSET_TX = 9; //handset_dual_mic_endfire_tx
-static uint32_t DEVICE_DUALMIC_SPEAKER_TX = 10; //speaker_dual_mic_endfire_tx
-static uint32_t DEVICE_TTY_HEADSET_MONO_RX = 11; //tty_headset_mono_rx
-static uint32_t DEVICE_TTY_HEADSET_MONO_TX = 12; //tty_headset_mono_tx
-static uint32_t DEVICE_BT_SCO_RX = 17; //bt_sco_rx
-static uint32_t DEVICE_BT_SCO_TX = 18; //bt_sco_tx
-static uint32_t DEVICE_SPEAKER_HEADSET_RX = 13; //headset_stereo_speaker_stereo_rx
-static uint32_t DEVICE_FMRADIO_STEREO_TX = 14;
-static uint32_t DEVICE_HDMI_STERO_RX = 15; //hdmi_stereo_rx
-static uint32_t DEVICE_COUNT = DEVICE_BT_SCO_TX +1;
+static int DEVICE_HANDSET_RX = 0; // handset_rx
+static int DEVICE_HANDSET_TX = 1;//handset_tx
+static int DEVICE_SPEAKER_RX = 2; //speaker_stereo_rx
+static int DEVICE_SPEAKER_TX = 3;//speaker_mono_tx
+static int DEVICE_HEADSET_RX = 4; //headset_stereo_rx
+static int DEVICE_HEADSET_TX = 5; //headset_mono_tx
+static int DEVICE_FMRADIO_HANDSET_RX= 6; //fmradio_handset_rx
+static int DEVICE_FMRADIO_HEADSET_RX= 7; //fmradio_headset_rx
+static int DEVICE_FMRADIO_SPEAKER_RX= 8; //fmradio_speaker_rx
+static int DEVICE_DUALMIC_HANDSET_TX = 9; //handset_dual_mic_endfire_tx
+static int DEVICE_DUALMIC_SPEAKER_TX = 10; //speaker_dual_mic_endfire_tx
+static int DEVICE_TTY_HEADSET_MONO_RX = 11; //tty_headset_mono_rx
+static int DEVICE_TTY_HEADSET_MONO_TX = 12; //tty_headset_mono_tx
+static int DEVICE_BT_SCO_RX = 17; //bt_sco_rx
+static int DEVICE_BT_SCO_TX = 18; //bt_sco_tx
+static int DEVICE_SPEAKER_HEADSET_RX = 13; //headset_stereo_speaker_stereo_rx
+static int DEVICE_FMRADIO_STEREO_TX = 14;
+static int DEVICE_HDMI_STERO_RX = 15; //hdmi_stereo_rx
+static int DEVICE_COUNT = DEVICE_BT_SCO_TX +1;
 
 
 int dev_cnt = 0;
 const char ** name = NULL;
 int mixer_cnt = 0;
-static uint32_t cur_tx = INVALID_DEVICE;
-static uint32_t cur_rx = INVALID_DEVICE;
+static int cur_tx = INVALID_DEVICE;
+static int cur_rx = INVALID_DEVICE;
 typedef struct routing_table
 {
     unsigned short dec_id;
@@ -151,7 +151,7 @@ enum FM_STATE {
 };
 
 FM_STATE fmState = FM_INVALID;
-static uint32_t fmDevice = INVALID_DEVICE;
+static int fmDevice = INVALID_DEVICE;
 
 #define DEV_ID(X) device_list[X].dev_id
 void addToTable(int decoder_id,int device_id,int device_id_tx,int stream_type,bool active) {
@@ -435,10 +435,11 @@ free(device_list);
 
 
 AudioHardware::AudioHardware() :
-    mInit(false), mMicMute(true), mBluetoothNrec(true), mBluetoothId(0),
+    mInit(false), mMicMute(true), mFmFd(-1),
+    mBluetoothNrec(true), mBluetoothId(0),
     mOutput(0),
     mCurSndDevice(-1),
-    mTtyMode(TTY_OFF), mDualMicEnabled(true), mFmFd(-1)
+    mDualMicEnabled(true), mTtyMode(TTY_OFF)
 {
 
         int control;
@@ -873,10 +874,10 @@ status_t AudioHardware::setFmVolume(float v)
         return NO_ERROR;
     }
     if(msm_set_volume(temp->dec_id, vol)) {
-        LOGE("msm_set_volume(%d) failed for FM errno = %d",vol,errno);
+        LOGE("msm_set_volume(%f) failed for FM errno = %d",vol,errno);
         return -1;
     }
-    LOGV("msm_set_volume(%d) for FM succeeded",vol);
+    LOGV("msm_set_volume(%f) for FM succeeded",vol);
     return NO_ERROR;
 }
 
@@ -898,7 +899,7 @@ status_t AudioHardware::setMasterVolume(float v)
     return -1;
 }
 
-static status_t do_route_audio_rpc(uint32_t device,
+static status_t do_route_audio_rpc(int device,
                                    bool ear_mute, bool mic_mute)
 {
     if(device == -1)
@@ -1071,7 +1072,7 @@ status_t AudioHardware::doAudioRouteOrMute(uint32_t device)
 status_t AudioHardware::doRouting(AudioStreamInMSM72xx *input)
 {
     Mutex::Autolock lock(mLock);
-    uint32_t outputDevices = mOutput->devices();
+    int outputDevices = mOutput->devices();
     status_t ret = NO_ERROR;
     int audProcess = (ADRC_DISABLE | EQ_DISABLE | RX_IIR_DISABLE);
     int sndDevice = -1;
@@ -1079,7 +1080,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM72xx *input)
     LOGI("doRouting %d %d\n",sndDevice,outputDevices);
 
     if (input != NULL) {
-        uint32_t inputDevice = input->devices();
+        int inputDevice = input->devices();
         LOGI("do input routing device %x\n", inputDevice);
         // ignore routing device information when we start a recording in voice
         // call
@@ -2378,11 +2379,11 @@ ssize_t AudioHardware::AudioStreamInMSM72xx::read( void* buffer, ssize_t bytes)
 
             ssize_t bytesRead = ::read(mFd, p, count);
             if (bytesRead > 0) {
-                LOGV("Number of Bytes read = %d", bytesRead);
+                LOGV("Number of Bytes read = %d", (int)bytesRead);
                 count -= bytesRead;
                 p += bytesRead;
                 bytes += bytesRead;
-                LOGV("Total Number of Bytes read = %d", bytes);
+                LOGV("Total Number of Bytes read = %d", (int)bytes);
 
                 *frameSizePtr =  bytesRead;
                 (*frameCountPtr)++;
@@ -2396,13 +2397,13 @@ ssize_t AudioHardware::AudioStreamInMSM72xx::read( void* buffer, ssize_t bytes)
                  * 512 to avoid short reads from driver */
                 if(count < 512)
                 {
-                   LOGI("buffer passed to driver %d, is less than the min 512 bytes", count);
+                   LOGI("buffer passed to driver %d, is less than the min 512 bytes", (int)count);
                    break;
                 }
             }
             else if(bytesRead == 0)
             {
-             LOGI("Bytes Read = %d ,Buffer no longer sufficient",bytesRead);
+             LOGI("Bytes Read = %d ,Buffer no longer sufficient",(int)bytesRead);
              break;
             } else {
                 if (errno != EAGAIN) return bytesRead;
