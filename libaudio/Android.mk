@@ -1,4 +1,4 @@
-
+ifneq ($(call is-android-codename,ICECREAM_SANDWICH),true)
 ifneq ($(BUILD_TINY_ANDROID),true)
 
 LOCAL_PATH := $(call my-dir)
@@ -48,4 +48,5 @@ endif
 include $(BUILD_SHARED_LIBRARY)
 
 endif # not BUILD_TINY_ANDROID
+endif # ICECREAM_SANDWICH
 
