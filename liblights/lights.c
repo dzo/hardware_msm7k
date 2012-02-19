@@ -15,7 +15,7 @@
  */
 
 
-// #define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 #define LOG_TAG "lights"
 
 #include <cutils/log.h>
@@ -81,6 +81,11 @@ char const*const KEYBOARD_FILE
 char const*const BUTTON_FILE
         = "/sys/class/leds/button-backlight/brightness";
 
+char const*const SLEEP_FILE
+        = "/sys/module/RGB_led/parameters/off_when_suspended";
+
+extern void huawei_oem_rapi_streaming_function(int,int,int,int,int *,int *,int *);
+
 /**
  * device methods
  */
@@ -119,6 +124,32 @@ write_int(char const* path, int value)
         return -errno;
     }
 }
+
+static int
+read_int(char const* path)
+{
+    int fd;
+    static int already_warned = 0;
+    int value;
+
+    fd = open(path, O_RDONLY);
+    if (fd >= 0) {
+        char buffer[20];
+	int amt = read(fd, buffer, 20);
+        sscanf(buffer, "%d", &value);
+	LOGI("read %d from %s",value,path);
+        close(fd);
+        return amt == -1 ? -errno : value;
+    } else {
+        if (already_warned == 0) {
+            LOGE("read_int failed to open %s\n", path);
+            already_warned = 1;
+        }
+        return -errno;
+    }
+}
+
+
 
 static int
 is_lit(struct light_state_t const* state)
@@ -195,6 +226,7 @@ set_light_buttons(struct light_device_t* dev,
     return err;
 }
 
+
 static int
 set_speaker_light_locked(struct light_device_t* dev,
         struct light_state_t const* state)
@@ -219,7 +251,7 @@ set_speaker_light_locked(struct light_device_t* dev,
 
     colorRGB = state->color;
 
-#if 0
+#if 1
     LOGD("set_speaker_light_locked colorRGB=%08X, onMS=%d, offMS=%d\n",
             colorRGB, onMS, offMS);
 #endif
@@ -247,6 +279,7 @@ set_speaker_light_locked(struct light_device_t* dev,
     }
 
     if (onMS > 0 && offMS > 0) {
+	int v[3];
         int totalMS = onMS + offMS;
 
         // the LED appears to blink about once per second if freq is 20
@@ -262,10 +295,23 @@ set_speaker_light_locked(struct light_device_t* dev,
             pwm = 16;
 
         blink = 1;
+        LOGI("Blink %d %d",onMS,offMS);
+        v[0]=colorRGB;
+        v[1]=onMS/2;
+        v[2]=offMS;
+//        if(read_int(SLEEP_FILE)==0)
+        huawei_oem_rapi_streaming_function(0x26,0,0,0xc,v,0,0);
     } else {
+	int v[3];
         blink = 0;
         freq = 0;
         pwm = 0;
+        LOGI("No Blink");
+        v[0]=colorRGB;
+        v[1]=0;
+        v[2]=0;
+//        if(read_int(SLEEP_FILE)==0)
+        huawei_oem_rapi_streaming_function(0x26,0,0,0xc,v,0,0);
     }
 
     if (!g_haveAmberLed) {
