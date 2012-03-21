@@ -50,7 +50,7 @@
 #endif
 
 #define LIBRPC_DEBUG(x...) do { \
-        SLOGD(x);               \
+/*        SLOGD(x);   */            \
     } while(0)
 
 #define E(x...) do {                                        \
