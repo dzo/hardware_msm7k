@@ -193,10 +193,11 @@ set_light_backlight(struct light_device_t* dev,
     int brightness = rgb_to_brightness(state);
 //    LOGI("set_light_backlight %d -> %d\n",g_backlight,brightness);
     pthread_mutex_lock(&g_lock);
-    if(g_backlight==0 && brightness)
+/*    if(g_backlight==0 && brightness)
 	err = write_int(BUTTON_FILE, 255);
     if(brightness==0)
         err = write_int(BUTTON_FILE, 0);
+*/
     g_backlight = brightness;
     err = write_int(LCD_FILE, brightness);
     if (g_haveTrackballLight) {
@@ -224,6 +225,11 @@ set_light_buttons(struct light_device_t* dev,
 {
     int err = 0;
     int on = rgb_to_brightness(state);
+    if(on>0 && on<48)
+        on=48;
+
+    LOGI("set_light_buttons %d -> %d\n",g_buttons,on);
+
     pthread_mutex_lock(&g_lock);
     g_buttons = on;
     err = write_int(BUTTON_FILE, on);
