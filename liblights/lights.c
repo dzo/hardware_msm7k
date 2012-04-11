@@ -244,9 +244,10 @@ set_speaker_light_locked(struct light_device_t* dev,
 {
     int len;
     int alpha, red, green, blue;
-    int blink, freq, pwm;
+    int freq, pwm;
     int onMS, offMS;
     unsigned int colorRGB;
+    static int blink;
 
     switch (state->flashMode) {
         case LIGHT_FLASH_TIMED:
@@ -312,7 +313,7 @@ set_speaker_light_locked(struct light_device_t* dev,
         v[2]=offMS;
 //        if(read_int(SLEEP_FILE)==0)
         huawei_oem_rapi_streaming_function(0x26,0,0,0xc,v,0,0);
-    } else {
+    } else if(blink==1) {
 	int v[3];
         blink = 0;
         freq = 0;
