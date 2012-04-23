@@ -44,6 +44,7 @@ static int g_trackball = -1;
 static int g_buttons = 0;
 static int g_attention = 0;
 static int g_haveAmberLed = 0;
+static int g_buttonschanged=0;
 
 char const*const TRACKBALL_FILE
         = "/sys/class/leds/jogball-backlight/brightness";
@@ -200,6 +201,8 @@ set_light_backlight(struct light_device_t* dev,
 */
     g_backlight = brightness;
     err = write_int(LCD_FILE, brightness);
+    if(g_buttonschanged==0)
+        write_int(BUTTON_FILE, brightness);
     if (g_haveTrackballLight) {
         handle_trackball_light_locked(dev);
     }
@@ -225,6 +228,7 @@ set_light_buttons(struct light_device_t* dev,
 {
     int err = 0;
     int on = rgb_to_brightness(state);
+    g_buttonschanged=1;
     if(on>0 && on<48)
         on=48;
 
@@ -272,48 +276,21 @@ set_speaker_light_locked(struct light_device_t* dev,
     green = (colorRGB >> 8) & 0xFF;
     blue = colorRGB & 0xFF;
 
-    if (!g_haveAmberLed) {
-        write_int(RED_LED_FILE, red);
-        write_int(GREEN_LED_FILE, green);
-        write_int(BLUE_LED_FILE, blue);
-    } else {
-        /* all of related red led is replaced by amber */
-        if (red) {
-            write_int(AMBER_LED_FILE, 1);
-            write_int(GREEN_LED_FILE, 0);
-        } else if (green) {
-            write_int(AMBER_LED_FILE, 0);
-            write_int(GREEN_LED_FILE, 1);
-        } else {
-            write_int(GREEN_LED_FILE, 0);
-            write_int(AMBER_LED_FILE, 0);
-        }
-    }
+    write_int(RED_LED_FILE, red);
+    write_int(GREEN_LED_FILE, green);
+    write_int(BLUE_LED_FILE, blue);
 
     if (onMS > 0 && offMS > 0) {
 	int v[3];
         int totalMS = onMS + offMS;
 
-        // the LED appears to blink about once per second if freq is 20
-        // 1000ms / 20 = 50
-        freq = totalMS / 50;
-        // pwm specifies the ratio of ON versus OFF
-        // pwm = 0 -> always off
-        // pwm = 255 => always on
-        pwm = (onMS * 255) / totalMS;
-
-        // the low 4 bits are ignored, so round up if necessary
-        if (pwm > 0 && pwm < 16)
-            pwm = 16;
-
         blink = 1;
         LOGI("Blink %d %d",onMS,offMS);
         v[0]=colorRGB;
         v[1]=onMS/2;
-        v[2]=offMS;
-//        if(read_int(SLEEP_FILE)==0)
+        v[2]=offMS/2;
         huawei_oem_rapi_streaming_function(0x26,0,0,0xc,v,0,0);
-    } else if(blink==1) {
+    } else /*if(blink==1)*/ {
 	int v[3];
         blink = 0;
         freq = 0;
@@ -322,20 +299,8 @@ set_speaker_light_locked(struct light_device_t* dev,
         v[0]=colorRGB;
         v[1]=0;
         v[2]=0;
-//        if(read_int(SLEEP_FILE)==0)
         huawei_oem_rapi_streaming_function(0x26,0,0,0xc,v,0,0);
     }
-
-    if (!g_haveAmberLed) {
-        if (blink) {
-            write_int(RED_FREQ_FILE, freq);
-            write_int(RED_PWM_FILE, pwm);
-        }
-        write_int(RED_BLINK_FILE, blink);
-    } else {
-        write_int(AMBER_BLINK_FILE, blink);
-    }
-
     return 0;
 }
 
