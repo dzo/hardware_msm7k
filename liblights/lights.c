@@ -42,7 +42,7 @@ static struct light_state_t g_battery;
 static int g_backlight = 0;
 static int g_trackball = -1;
 static int g_buttons = 0;
-static int g_attention = 0;
+static struct light_state_t g_attention;
 static int g_haveAmberLed = 0;
 static int g_buttonschanged=0;
 
@@ -71,7 +71,10 @@ char const*const RED_PWM_FILE
         = "/sys/class/leds/red/device/grppwm";
 
 char const*const RED_BLINK_FILE
-        = "/sys/class/leds/red/device/blink";
+        = "/sys/class/leds/red/blink";
+
+char const*const GREEN_BLINK_FILE
+        = "/sys/class/leds/green/blink";
 
 char const*const AMBER_BLINK_FILE
         = "/sys/class/leds/amber/blink";
@@ -158,25 +161,6 @@ is_lit(struct light_state_t const* state)
     return state->color & 0x00ffffff;
 }
 
-static int
-handle_trackball_light_locked(struct light_device_t* dev)
-{
-    int mode = g_attention;
-
-    if (mode == 7 && g_backlight) {
-        mode = 0;
-    }
-    LOGV("%s g_backlight = %d, mode = %d, g_attention = %d\n",
-        __func__, g_backlight, mode, g_attention);
-
-    // If the value isn't changing, don't set it, because this
-    // can reset the timer on the breathing mode, which looks bad.
-    if (g_trackball == mode) {
-        return 0;
-    }
-
-    return write_int(TRACKBALL_FILE, mode);
-}
 
 static int
 rgb_to_brightness(struct light_state_t const* state)
@@ -203,9 +187,6 @@ set_light_backlight(struct light_device_t* dev,
     err = write_int(LCD_FILE, brightness);
     if(g_buttonschanged==0)
         write_int(BUTTON_FILE, brightness);
-    if (g_haveTrackballLight) {
-        handle_trackball_light_locked(dev);
-    }
     pthread_mutex_unlock(&g_lock);
     return err;
 }
@@ -254,6 +235,7 @@ set_speaker_light_locked(struct light_device_t* dev,
     static int blink;
 
     switch (state->flashMode) {
+        case LIGHT_FLASH_HARDWARE:
         case LIGHT_FLASH_TIMED:
             onMS = state->flashOnMS;
             offMS = state->flashOffMS;
@@ -268,7 +250,7 @@ set_speaker_light_locked(struct light_device_t* dev,
     colorRGB = state->color;
 
 #if 1
-    LOGD("set_speaker_light_locked colorRGB=%08X, onMS=%d, offMS=%d\n",
+    LOGV("set_speaker_light_locked colorRGB=%08X, onMS=%d, offMS=%d\n",
             colorRGB, onMS, offMS);
 #endif
 
@@ -280,6 +262,13 @@ set_speaker_light_locked(struct light_device_t* dev,
     write_int(GREEN_LED_FILE, green);
     write_int(BLUE_LED_FILE, blue);
 
+    if (state->flashMode != LIGHT_FLASH_NONE) {
+        if(red)
+            write_int(RED_BLINK_FILE,1);
+	else if(green)
+            write_int(GREEN_BLINK_FILE,1);
+    }
+/*
     if (onMS > 0 && offMS > 0) {
 	int v[3];
         int totalMS = onMS + offMS;
@@ -287,10 +276,10 @@ set_speaker_light_locked(struct light_device_t* dev,
         blink = 1;
         LOGI("Blink %d %d",onMS,offMS);
         v[0]=colorRGB;
-        v[1]=onMS/2;
-        v[2]=offMS/2;
+        v[1]=onMS;
+        v[2]=offMS;
         huawei_oem_rapi_streaming_function(0x26,0,0,0xc,v,0,0);
-    } else /*if(blink==1)*/ {
+    } else {
 	int v[3];
         blink = 0;
         freq = 0;
@@ -301,6 +290,8 @@ set_speaker_light_locked(struct light_device_t* dev,
         v[2]=0;
         huawei_oem_rapi_streaming_function(0x26,0,0,0xc,v,0,0);
     }
+*/
+
     return 0;
 }
 
@@ -309,8 +300,10 @@ handle_speaker_battery_locked(struct light_device_t* dev)
 {
     if (is_lit(&g_battery)) {
         set_speaker_light_locked(dev, &g_battery);
-    } else {
+    } else if (is_lit(&g_notification)) {
         set_speaker_light_locked(dev, &g_notification);
+    } else {
+        set_speaker_light_locked(dev, &g_attention);
     }
 }
 
@@ -320,9 +313,7 @@ set_light_battery(struct light_device_t* dev,
 {
     pthread_mutex_lock(&g_lock);
     g_battery = *state;
-    if (g_haveTrackballLight) {
-        set_speaker_light_locked(dev, state);
-    }
+    LOGV("set_light_battery color=0x%08x mode=%d", state->color, state->flashMode);
     handle_speaker_battery_locked(dev);
     pthread_mutex_unlock(&g_lock);
     return 0;
@@ -334,11 +325,7 @@ set_light_notifications(struct light_device_t* dev,
 {
     pthread_mutex_lock(&g_lock);
     g_notification = *state;
-    LOGV("set_light_notifications g_trackball=%d color=0x%08x",
-            g_trackball, state->color);
-    if (g_haveTrackballLight) {
-        handle_trackball_light_locked(dev);
-    }
+    LOGV("set_light_notifications color=0x%08x mode=%d", state->color, state->flashMode);
     handle_speaker_battery_locked(dev);
     pthread_mutex_unlock(&g_lock);
     return 0;
@@ -349,16 +336,13 @@ set_light_attention(struct light_device_t* dev,
         struct light_state_t const* state)
 {
     pthread_mutex_lock(&g_lock);
-    LOGV("set_light_attention g_trackball=%d color=0x%08x",
-            g_trackball, state->color);
-    if (state->flashMode == LIGHT_FLASH_HARDWARE) {
-        g_attention = state->flashOnMS;
-    } else if (state->flashMode == LIGHT_FLASH_NONE) {
-        g_attention = 0;
+    if(state->flashMode != LIGHT_FLASH_NONE) {
+        g_attention = *state;
+        g_attention.color=0xff0000;
     }
-    if (g_haveTrackballLight) {
-        handle_trackball_light_locked(dev);
-    }
+    else g_attention.color=0;
+    LOGV("set_light_attention color=0x%08x mode=%d", state->color, state->flashMode);
+    handle_speaker_battery_locked(dev);
     pthread_mutex_unlock(&g_lock);
     return 0;
 }
