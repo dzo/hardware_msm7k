@@ -76,6 +76,9 @@ char const*const RED_BLINK_FILE
 char const*const GREEN_BLINK_FILE
         = "/sys/class/leds/green/blink";
 
+char const*const BLUE_BLINK_FILE
+        = "/sys/class/leds/blue/blink";
+
 char const*const AMBER_BLINK_FILE
         = "/sys/class/leds/amber/blink";
 
@@ -112,6 +115,8 @@ write_int(char const* path, int value)
 {
     int fd;
     static int already_warned = 0;
+
+    LOGV("write_int %s %d",path,value);
 
     fd = open(path, O_RDWR);
     if (fd >= 0) {
@@ -254,19 +259,30 @@ set_speaker_light_locked(struct light_device_t* dev,
             colorRGB, onMS, offMS);
 #endif
 
+    red=green=blue=0;
+
+    if((colorRGB >> 16) & 0xFF) red=1;
+    if((colorRGB >> 8) & 0xFF) green=1;
+    if(colorRGB & 0xFF) blue=1;
+
+/*
     red = (colorRGB >> 16) & 0xFF;
     green = (colorRGB >> 8) & 0xFF;
     blue = colorRGB & 0xFF;
+*/
 
     write_int(RED_LED_FILE, red);
     write_int(GREEN_LED_FILE, green);
     write_int(BLUE_LED_FILE, blue);
+    usleep(10*1000);
 
     if (state->flashMode != LIGHT_FLASH_NONE) {
         if(red)
             write_int(RED_BLINK_FILE,1);
-	else if(green)
+        if(green)
             write_int(GREEN_BLINK_FILE,1);
+        if(blue)
+            write_int(BLUE_BLINK_FILE,1);
     }
 /*
     if (onMS > 0 && offMS > 0) {
@@ -300,11 +316,14 @@ handle_speaker_battery_locked(struct light_device_t* dev)
 {
     if (is_lit(&g_battery)) {
         set_speaker_light_locked(dev, &g_battery);
-    } else if (is_lit(&g_notification)) {
+    } else 
+	set_speaker_light_locked(dev, &g_notification);
+/*if (is_lit(&g_notification)) {
         set_speaker_light_locked(dev, &g_notification);
     } else {
         set_speaker_light_locked(dev, &g_attention);
     }
+*/
 }
 
 static int
@@ -336,13 +355,19 @@ set_light_attention(struct light_device_t* dev,
         struct light_state_t const* state)
 {
     pthread_mutex_lock(&g_lock);
-    if(state->flashMode != LIGHT_FLASH_NONE) {
-        g_attention = *state;
-        g_attention.color=0xff0000;
-    }
-    else g_attention.color=0;
     LOGV("set_light_attention color=0x%08x mode=%d", state->color, state->flashMode);
-    handle_speaker_battery_locked(dev);
+    g_attention = *state;
+    if(state->flashMode != LIGHT_FLASH_NONE) {
+	if(g_attention.color)
+	        g_attention.color=0xff0000;
+    }
+    else {
+	if(g_attention.color) {
+		g_attention.color=0;
+		g_attention.flashMode=LIGHT_FLASH_NONE;
+	}
+    }
+//    handle_speaker_battery_locked(dev);
     pthread_mutex_unlock(&g_lock);
     return 0;
 }
