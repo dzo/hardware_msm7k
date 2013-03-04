@@ -15,7 +15,7 @@
  */
 
 
-//#define LOG_NDEBUG 0
+#define LOG_NDEBUG 0
 #define LOG_TAG "lights"
 
 #include <cutils/log.h>
@@ -190,8 +190,11 @@ set_light_backlight(struct light_device_t* dev,
 */
     g_backlight = brightness;
     err = write_int(LCD_FILE, brightness);
-    if(g_buttonschanged==0)
-        write_int(BUTTON_FILE, brightness);
+//    if(g_buttonschanged==0)
+    if(brightness>0 && brightness<48)
+        brightness=48;
+
+    write_int(BUTTON_FILE, brightness);
     pthread_mutex_unlock(&g_lock);
     return err;
 }
@@ -214,7 +217,7 @@ set_light_buttons(struct light_device_t* dev,
 {
     int err = 0;
     int on = rgb_to_brightness(state);
-    g_buttonschanged=1;
+    if(on) g_buttonschanged=1;
     if(on>0 && on<48)
         on=48;
 
@@ -222,7 +225,7 @@ set_light_buttons(struct light_device_t* dev,
 
     pthread_mutex_lock(&g_lock);
     g_buttons = on;
-    err = write_int(BUTTON_FILE, on);
+//    err = write_int(BUTTON_FILE, on);
     pthread_mutex_unlock(&g_lock);
     return err;
 }
